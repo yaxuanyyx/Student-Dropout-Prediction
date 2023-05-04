@@ -1,0 +1,82 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+```{r}
+train_AFTER_EDA <- read_csv("output data/train_AFTER_EDA.csv")
+test_AFTER_EDA <- read_csv("output data/test_AFTER_EDA.csv")
+train_AFTER_EDA$Dropout <- as.factor(train_AFTER_EDA$Dropout)
+```
+
+```{r}
+library(readr)
+library(tidyverse)
+library(caret)
+library(ggplot2)
+library(lattice)
+library(klaR)
+set.seed(12345)
+```
+
+```{r}
+intrain <- createDataPartition(train_AFTER_EDA$Dropout,p=0.75,list = FALSE)
+train <- train_AFTER_EDA[intrain,]
+test <- train_AFTER_EDA[-intrain,]
+
+trctrl <- trainControl(method = "cv",
+                     number = 10,
+                     classProbs = FALSE,
+                     )
+train[sapply(train, is.character)] <- lapply(train[sapply(train, is.character)], 
+                                                           as.factor)
+# Naive Bayes
+nb_fit <- train(Dropout ~ Parent.Adjusted.Gross.Income+MathPlacement+EngPlacement+GatewayMathStatus+GatewayEnglishStatus+final_GPA+total_Loan+total_Scholarship+total_Work_Study+total_Grant+race+overall_income, data = train, method = "nb", 
+                trControl=trctrl)
+nb_fit
+```
+
+```{r}
+#Predict using the test data
+class_prob <- predict(nb_fit, newdata = test, type="prob")
+class_prob1 <- predict(nb_fit, newdata = test, type="raw")
+
+print(class_prob)
+```
+
+```{r}
+test$Dropout <- factor(test$Dropout)
+#Report Accuracy, Precision, Recall rate, and F measure
+confusionMatrix(class_prob1,test$Dropout)
+F_meas(class_prob1,test$Dropout)
+```
+
+```{r}
+precision(class_prob1,test$Dropout)
+recall(class_prob1,test$Dropout)
+```
+
+### Performance Metrics
+
+Accuracy for testing data: 0.7428
+
+Sensitivity for testing data: 0.9048
+
+Specificity for testing data: 0.4852
+
+Precision for testing data: 0.7364777
+
+Recall rate for testing data: 0.9048379
+
+F-measure score for testing data: 0.8120229
+
+### Why Use Naive Bayes Model & Conclusion
+
+-   It is good at solving classification problems, mainly used for a high-dimensional training dataset
+
+-   It handles both discrete and continuous data, and highly scalable with the number of predictors and data points
+
+### Difficulties Through Project
+
+-   In the feature engineering and modeling part, finding a starting point to analyze each variable is hard for me. Take race as an example, it has multiple column with specific races. In order to evaluate this variable, I have to decide whether I should keep all these columns or combine these columns to a new one, whether I should separate these columns to different groups or not, and how what is the standard to separate them, etc.
